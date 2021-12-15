@@ -60,7 +60,7 @@ def run():
     print("Read proteins", reference_df.shape, *reference_df.columns.tolist())
 
     print("Subselecting to MHC I hits. Before: ", len(df))
-    df = df.loc[df.mhc_class == "I"]
+    #df = df.loc[df.mhc_class == "I"]
     print("After: ", len(df))
 
     print("Subselecting to gene-associated hits. Before: ", len(df))

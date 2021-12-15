@@ -45,6 +45,19 @@ parser.add_argument(
     help="Path to systemhc-atlas-style mass-spec data")
 
 parser.add_argument(
+    "--class1-pseudosequences-csv",
+    required=True,
+    help="Combined result file")
+parser.add_argument(
+    "--allele-sequences-nodiff-csv",
+    required=True,
+    help="Combined result file")
+parser.add_argument(
+    "--allele-sequences-csv",
+    required=True,
+    help="Combined result file")
+
+parser.add_argument(
     "--out-csv",
     required=True,
     help="Combined result file")
@@ -239,6 +252,11 @@ def load_data_iedb(iedb_csv, include_qualitative=True):
     train_data["original_allele"] = iedb_df["Allele Name"].values
     train_data["measurement_type"] = iedb_df["measurement_type"].values
     train_data["measurement_kind"] = iedb_df["measurement_kind"].values
+    
+    train_data["date"] = iedb_df["Date"].values
+    #train_data["pubmed_id"] = iedb_df["PubMed ID"].values
+    train_data["reference"] = iedb_df["Reference IRI"].values
+    
     train_data = train_data.drop_duplicates().reset_index(drop=True)
 
     return train_data
@@ -267,6 +285,39 @@ def load_data_additional_ms(filename):
     df["original_allele"] = ""
     return df
 
+
+def add_pseudosequences(df, args):
+    # name fixes
+    df.allele = df.allele.str.replace('\*00', '*0')
+    df.allele = df.allele.str.replace('DLA-88\*034\:01', 'DLA-88*34:01')
+    df.allele = df.allele.str.replace('H2-([A-Z])\*(.*)', lambda m: 'H-2-' + m.group(1) + m.group(2), regex=True)
+    
+    class1_pseudosequences_df = pandas.read_csv(args.class1_pseudosequences_csv)
+    class1_pseudosequences_df.allele = class1_pseudosequences_df.allele.map(normalize_allele_name_or_return_unknown)
+    class1_pseudosequences_df = class1_pseudosequences_df[class1_pseudosequences_df.allele != 'UNKNOWN']
+    class1_pseudosequences_df.allele = class1_pseudosequences_df.allele.str.replace('\*00', '*0')
+    class1_pseudosequences_dict = class1_pseudosequences_df.set_index('allele', drop=True).to_dict()['pseudosequence']
+
+    allele_sequences_nodiff_df = pandas.read_csv(args.allele_sequences_nodiff_csv)
+    allele_sequences_nodiff_df.columns = ['allele', 'pseudosequence']
+    allele_sequences_nodiff_dict = allele_sequences_nodiff_df.set_index('allele', drop=True).to_dict()['pseudosequence']
+    
+    allele_sequences_df = pandas.read_csv(args.allele_sequences_csv)
+    allele_sequences_df.columns = ['allele', 'pseudosequence']
+    allele_sequences_dict = allele_sequences_df.set_index('allele', drop=True).to_dict()['pseudosequence']
+    
+    df['pseudosequence_mhcpan_34'] = df.allele.map(lambda x: class1_pseudosequences_dict.get(x))
+    df['pseudosequence_mhcflurry_34'] = df.allele.map(lambda x: allele_sequences_nodiff_dict.get(x))
+    df['pseudosequence_mhcflurry_37'] = df.allele.map(lambda x: allele_sequences_dict.get(x))
+    
+    new_df = df[
+        (~df['pseudosequence_mhcpan_34'].isna()) |
+        (~df['pseudosequence_mhcflurry_34'].isna()) |
+        (~df['pseudosequence_mhcflurry_37'].isna())
+    ]
+    print("Pseudosequences for the following alleles are missing:\n", '\n'.join(set(df.allele) - set(new_df.allele)))
+    
+    return new_df
 
 def run():
     args = parser.parse_args(sys.argv[1:])
@@ -314,7 +365,13 @@ def run():
         "measurement_kind",
         "measurement_source",
         "original_allele",
+        "date",
+        "reference"
     ]].sort_values(["allele", "peptide"]).dropna()
+    
+    print("Removing alleles with unknown pseudosequence")
+    df = add_pseudosequences(df, args)
+    print("New df: %s" % (str(df.shape)))
 
     print("Final combined df: %s" % (str(df.shape)))
 

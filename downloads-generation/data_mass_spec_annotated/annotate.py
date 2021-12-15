@@ -91,6 +91,7 @@ def run():
                     start / len(reference_row.seq),
                     n_flank,
                     c_flank,
+                    reference_row.seq
                 ))
 
         if args.debug_max_rows and len(join_df) > args.debug_max_rows:
@@ -107,6 +108,7 @@ def run():
             "start_fraction_in_protein",
             "n_flank",
             "c_flank",
+            "protein_sequence"
         ]).drop_duplicates()
 
     join_df["protein_accession"] = join_df.match_index.map(

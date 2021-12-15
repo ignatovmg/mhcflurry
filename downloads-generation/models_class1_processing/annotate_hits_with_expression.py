@@ -38,7 +38,7 @@ def run():
     hit_df = hit_df.loc[
         (~hit_df.protein_ensembl.isnull())
     ]
-    print("Loaded hits from %d samples" % hit_df.sample_id.nunique())
+    #print("Loaded hits from %d samples" % hit_df.sample_id.nunique())
     expression_df = pandas.read_csv(args.expression, index_col=0).fillna(0)
 
     # Add a column to hit_df giving expression value for that sample and that gene
