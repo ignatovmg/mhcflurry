@@ -5,7 +5,7 @@ SRCDIR=$(pwd)
 WDIR=$(pwd)/data
 mkdir -p $WDIR
 
-#if [ '1' ]; then
+#if [ '' ]; then
 
 mkdir -p $WDIR/mhcflurry_data/allele_sequences && cd $WDIR/mhcflurry_data/allele_sequences
 if [ ! -f allele_sequences.20191231.tar.bz2 ]; then
@@ -67,8 +67,6 @@ fi
 tar xvf data_references.20190927.tar.bz2
 cd -
 
-#fi
-
 cd $SRCDIR/../downloads-generation/data_mass_spec_annotated 
 python annotate.py \
     $WDIR/generated/iedb_curated_ms.csv.bz2 \
@@ -86,6 +84,11 @@ python write_proteome_peptides.py \
     --out $WDIR/generated/iedb_proteome_peptides.csv # --debug-max-rows 10
 bzip2 -f $WDIR/generated/iedb_proteome_peptides.csv
 cd -
+
+#fi
+
+python mhc_mapping.py $WDIR/mhcflurry_data/allele_sequences/class1.aligned.fasta.gz $WDIR/generated/mhc_ps_mapping.csv
+bzip2 -f $WDIR/generated/mhc_ps_mapping.csv
 
 #cd mhcflurry/downloads-generation/models_class1_processing
 #python annotate_hits_with_expression.py \
